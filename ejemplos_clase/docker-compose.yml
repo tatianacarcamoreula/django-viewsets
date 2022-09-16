@@ -54,6 +54,6 @@ services:
     # Control de consola:
     stdin_open: true
     tty: true
-    command: python marvel/manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:8000
     depends_on:
       - db
