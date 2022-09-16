@@ -142,7 +142,7 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     # NOTE: Con el siguiente atributo puedo administrar que tipo
     # de métodos permite esta view.
-    http_method_names = ['get', 'post', 'put', 'delete']
+    # http_method_names = ['get', 'post', 'put', 'delete']
     queryset = serializer_class.Meta.model.objects.all()
 
 
