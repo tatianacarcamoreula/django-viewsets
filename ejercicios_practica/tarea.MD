@@ -13,10 +13,10 @@ Recuerde que no debe subir la base de datos al sistema, para ello se encuentra e
 
 ---
 ### 1. Realizar las vistas de API.
-Debe realizar una vista de API que herede de GenericViewSet y permita realizar un CRUD del modelo Comic.
-Tenga en cuenta que las acciones no vienen predefinidas por defecto, debe realizarlas desde 0, todas deben pasar por el serializador correspondiente.
-Debe proporcionar protección de acceso a estas vistas de API, la que debe ser accesible solo si el usuario está autenticado.
-Debe sobreescribir el método que poseen los serializadores para no mostrar el campo `description` al listar objetos o instancias.
+Debe realizar una vista de API que herede de `GenericViewSet` y permita realizar un **CRUD** del modelo Comic.
+- Tenga en cuenta que las acciones no vienen predefinidas por defecto, debe realizarlas desde 0, todas deben pasar por el serializador correspondiente.
+- Debe proporcionar protección de acceso a estas vistas de API, la que debe ser accesible solo si el usuario está autenticado.
+- Debe sobreescribir el método que poseen los serializadores para no mostrar el campo `description` al listar objetos o instancias.
 
 ### 2. Realizar una nueva vista de API.
 Debe realizar una vista de API que herede de ModelViewSet y permita **únicamente** listar los comics.
@@ -29,8 +29,8 @@ Debe proporcionar protección de acceso a estas vistas de API, la que debe ser a
 **NOTA**: Crear un archivo dentro del directorio *api* llamado `comic_viewsets.py` y colocar todas las vistas pedidas con su lógicas correspondientes.
 
 ### 3. Crear el router para que administre las rutas del endpoint de manera automática.
-Crear un archivo llamado `comic_routers.py` dentro del directorio *api* y llamar a la clase correspondiente para agregar el ruteo de nuestra API.
-Se deja a criterio de cada uno, definir el endpoint.
+- Crear un archivo llamado `comic_routers.py` dentro del directorio *api* y llamar a la clase correspondiente para agregar el ruteo de nuestra API.
+- Se deja a criterio de cada uno, definir el endpoint.
 **Ayuda**: Puede fijarse los ejemplos de clase para poder guiarse.
 
 ### 4. Ejercicio extra:
