@@ -156,11 +156,12 @@ class FilteringBackendUserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     # NOTE: Habilito sólo el método 'GET' para esta view.
     http_method_names = ('get',)
+    queryset = serializer_class.Meta.model.objects.all()
 
     # NOTE: Utilizo el tipo de filtro.
-    # filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     # filter_backends = (DjangoFilterBackend, SearchFilter)
-    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
+    # filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
     
     # NOTE: Selecciono los campos a filtrar.
     filterset_fields = ('id', 'username', 'email', 'is_staff')
@@ -183,10 +184,9 @@ class FilteringBackendUserViewSet(viewsets.ModelViewSet):
 
     # Permite ordenar el listado por los campos seleccionados.
     # NOTE: se requiere `OrderingFilter`.
-    ordering = ('pk', 'username')
-    # ordering = ('-pk', 'username')
-
-    queryset = serializer_class.Meta.model.objects.all()
+    ordering_fields = ('pk', 'username')
+    ordering = ('pk',)
+    # ordering = ('-pk',)
 
 
 class FilteringUserViewSet(viewsets.GenericViewSet):
