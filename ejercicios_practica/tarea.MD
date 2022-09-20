@@ -24,7 +24,6 @@ La vista debe:
 - Permitir filtrar por el campo `title`, `marvel_id`, filtrar aquellos comics cuya cantidad sea mayor e igual a 5. Utilizar la clase que permita realizar este filtro genérico.
 - Permitir que pueda buscar y que contenga en la view en el campo `title`, el valor a pasar, no distinguiendo entre maýusculas y minúsculas.
 - Permitir que pueda ordenar de mayor a menor por campo `marvel_id`, y, ordenar alfabéticamente según el campo `title`. Utilizar la clase que permita eso.
-- *AYUDA*: No debe sobreescribir la acción sino que toda la lógica debe estar implementada en el método `.get_queryset()`. Debe sobreescribirlo.
 - Debe proporcionar protección de acceso a estas vistas de API, la que debe ser accesible solo si el usuario está autenticado.
 - **NOTA**: Crear un archivo dentro del directorio *api* llamado `comic_viewsets.py` y colocar todas las vistas pedidas con su lógicas correspondientes.
 
