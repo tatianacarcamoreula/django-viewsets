@@ -20,10 +20,24 @@ router = DefaultRouter()
 # NOTE: Recordar que cuando enlazamos un archivo de rutas, Django
 # siempre va intentar buscar en el archivo es que exista la lista
 # 'urlpatterns'.
-router.register(r'modelviewset/users', UserViewSet)
 router.register(
-    r'modelviewset/filtering-backend/users', FilteringBackendUserViewSet
+    r'modelviewset/users',
+    UserViewSet,
+    basename='modelviewset/users'
 )
-router.register(r'viewset/users', CustomUserViewSet)
-router.register(r'genericviewset/users', FilteringUserViewSet)
+router.register(
+    r'modelviewset/filtering-backend/users',
+    FilteringBackendUserViewSet,
+    basename='modelviewset/filtering-backend/users'
+)
+router.register(
+    r'viewset/users',
+    CustomUserViewSet,
+    basename='viewsets/users'
+)
+router.register(
+    r'genericviewset/users',
+    FilteringUserViewSet,
+    basename='genericviewset/users'
+)
 urlpatterns = router.urls
