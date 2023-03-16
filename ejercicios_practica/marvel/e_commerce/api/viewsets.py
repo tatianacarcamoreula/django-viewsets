@@ -38,7 +38,7 @@ class ShortResultsSetPagination(PageNumberPagination):
 class CustomUserViewSet(viewsets.ViewSet):
     permission_classes = [IsAdminUser]
     serializer_class = UserSerializer
-    queryset = User.objects.all()   # equivale a: User.objects.filter()
+    queryset = User.objects.all()
 
     # Este método permite administrar los permisos según el tipo de 
     # acción que se ejecute.
@@ -46,6 +46,11 @@ class CustomUserViewSet(viewsets.ViewSet):
         if self.action != 'list':
             self.permission_classes = [IsAuthenticated]
         return [permission() for permission in self.permission_classes]
+    
+    def _get_current_user(self):
+        return get_object_or_404(
+            User, username=self.request.user
+        )
 
     def list(self, request):
         return Response(
@@ -67,32 +72,37 @@ class CustomUserViewSet(viewsets.ViewSet):
         )
         
     def update(self, request, pk=None):
-        _user = self.queryset.filter(pk=pk)
-        if _user:
-            user_serializer = self.serializer_class(
-                instance = _user.first(),
-                data=request.data
-            )
-            if user_serializer.is_valid():
-                user_serializer.save()
-                return Response(
-                    data=user_serializer.data,
-                    status=status.HTTP_200_OK
-                )
-            return Response(
-                data=user_serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        _current_user =  self._get_current_user()
 
-        return Response(
-                data={'error': 'the user does not exist'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-    def retrieve(self, request, pk=None):
         # Me devuelve la instancia a partir del queryset, en caso
         # de no existir, retorna un código de estado 404.
         _user = get_object_or_404(self.queryset, pk=pk)
+
+        # if _current_user != _user:
+        #     return Response(status=status.HTTP_403_FORBIDDEN)
+
+        user_serializer = self.serializer_class(
+            instance = _user,
+            data=request.data
+        )
+        if user_serializer.is_valid():
+            user_serializer.save()
+            return Response(
+                data=user_serializer.data,
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            data=user_serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    def retrieve(self, request, pk=None):
+        _current_user =  self._get_current_user()
+        _user = get_object_or_404(self.queryset, pk=pk)
+
+        # if _current_user != _user:
+        #     return Response(status=status.HTTP_403_FORBIDDEN)
+
         return Response(
             data=self.serializer_class(
                 instance=_user,
@@ -102,11 +112,10 @@ class CustomUserViewSet(viewsets.ViewSet):
         )
 
     def destroy(self, request, pk=None):
-        _user = get_object_or_404(self.queryset, pk=pk)
-        _user.delete()
+        self.queryset.filter(pk=pk).delete()
         return Response(
             data={'message': 'the user was deleted successfully'},
-            status=status.HTTP_204_NO_CONTENT
+            status=status.HTTP_200_OK
         )
 
     # Al trabajar con Viewsets podemos definir nuestras propias
@@ -118,7 +127,12 @@ class CustomUserViewSet(viewsets.ViewSet):
         url_path='change-password'
     )
     def change_password(self, request, pk=None):
+        _current_user =  self._get_current_user()
         _user = get_object_or_404(self.queryset, pk=pk)
+
+        if _current_user != _user:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
         _user_serializer = UpdatePasswordUserSerializer(
             instance=_user,
             data=request.data,
@@ -160,8 +174,8 @@ class FilteringBackendUserViewSet(viewsets.ModelViewSet):
 
     # NOTE: Utilizo el tipo de filtro.
     filter_backends = (DjangoFilterBackend,)
-    # filter_backends = (DjangoFilterBackend, SearchFilter)
-    # filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
+    filter_backends = (DjangoFilterBackend, SearchFilter)
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
     
     # NOTE: Selecciono los campos a filtrar.
     filterset_fields = ('id', 'username', 'email', 'is_staff')
@@ -175,8 +189,7 @@ class FilteringBackendUserViewSet(viewsets.ModelViewSet):
     # }
 
     # Genero un Paginado
-    pagination_class = LimitOffsetPagination
-    # pagination_class = ShortResultsSetPagination
+    pagination_class = LimitOffsetPagination    # ShortResultsSetPagination PageNumberPagination
 
     # Para buscar el valor en los campos seleccionados.
     # NOTE: se requiere `SearchFilter`.
@@ -185,8 +198,7 @@ class FilteringBackendUserViewSet(viewsets.ModelViewSet):
     # Permite ordenar el listado por los campos seleccionados.
     # NOTE: se requiere `OrderingFilter`.
     ordering_fields = ('pk', 'username')
-    ordering = ('pk',)
-    # ordering = ('-pk',)
+    ordering = ('pk',)  # ('-pk',)
 
 
 class FilteringUserViewSet(viewsets.GenericViewSet):
@@ -212,54 +224,23 @@ class FilteringUserViewSet(viewsets.GenericViewSet):
         # _pk: self.request.GET.get('id')
         _pk = self.request.query_params.get('id')
         _username = self.request.query_params.get('username')
-        _email = self.request.query_params.get('email')
-        _is_staff = self.request.query_params.get('is_staff')
-        _search = self.request.query_params.get('search')
-        _ordering = self.request.query_params.get('ordering')
+        _is_staff = self.request.query_params.get('is_staff', '').capitalize()
+        _search = self.request.query_params.get('search', '')
+        _ordering = self.request.query_params.get('ordering', 'username')
 
-        # Realizo el filtrado según los parámetros que me pasen.
-        if _pk:
-            queryset = queryset.filter(pk=int(_pk))
-        if _username:
-            queryset = queryset.filter(username__icontains=_username)
-        if _email:
-            queryset = queryset.filter(email__exact=_email)
-        if _is_staff:
-            queryset = queryset.filter(is_staff=_is_staff)
-
-        # Realizo la búsqueda:
-        # NOTE: El objeto 'Q' es equivalente al operador OR en SQL.
-        if _search:
-            queryset = queryset.filter(
+        queryset = queryset.filter(
+            Q(username__icontains=_username) &
+            Q(
                 Q(username__icontains=_search) | 
                 Q(first_name__icontains=_search) |
                 Q(last_name__icontains=_search)
             )
+        ).order_by(_ordering)
 
-        # Realizo el ordenamiento:
-        if _ordering:
-            # NOTE: Podríamos resolverlo con esta única línea pero
-            # el usuario podría escribir mal el nombre de un parámetro y
-            # provocaría que el servidor arroje un error.
-            # Si estamos seguro de que siempre va a pasar bien los parámetros
-            # podemos usar esta línea.
-            # queryset = queryset.order_by(_ordering.lower())
-
-            # Con esto nos aseguramos de que me ordene según estos campos.
-            if _ordering == '-pk':
-                queryset = queryset.order_by('-pk')
-            elif _ordering == 'username':
-                queryset = queryset.order_by('username')
-            else:
-                queryset = queryset.order_by('pk')
+        # Realizo el filtrado según los parámetros que me pasen.
+        if _pk:
+            queryset = queryset.filter(pk=int(_pk))
+        if _is_staff:
+            queryset = queryset.filter(is_staff=eval(_is_staff))
 
         return queryset
-
-    def list(self, request):
-        return Response(
-            data=self.get_serializer(
-                instance=self.get_queryset(), many=True
-            ).data,
-            status=status.HTTP_200_OK
-        )
-

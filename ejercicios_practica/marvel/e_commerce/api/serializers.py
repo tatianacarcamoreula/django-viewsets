@@ -28,17 +28,38 @@ class ComicSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
+        exclude = ('password',)
+
+
+class UserLoginSerializer(serializers.Serializer):
+    username = serializers.CharField(write_only=True, required=True)
+    password = serializers.CharField(write_only=True, required=True)
+    class Meta:
+        fields = ('username', 'password')
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
         # fields = '__all__'
         exclude = ('groups', 'user_permissions')
+        read_only_fields = ('id', 'last_login', 'date_joined')
 
+    # Validación a nivel de campo.
     def validate_password(self, value):
+        print('Se ejecutó 1ro la validación a nivel de campo.')
+        # Utilizo la validación de password ofrecida por Django, en
+        # caso de no pasar, genera una excepción.
         try:
             password_validation.validate_password(value)
             return value
         except DjangoValidationError as e:
             raise serializers.ValidationError({'messages': e})
 
+    # Validación a nivel de objecto/instancia.
     def validate(self, attrs):
+        print('Se ejecutó 2do la validación a nivel de objeto/instancia.')
+        # Hasheo la password.
         attrs['password'] = make_password(
             password=attrs.get('password')
         )
@@ -82,39 +103,18 @@ class UserSerializer(serializers.ModelSerializer):
         
         # NOTE: Descomentar, realizar una petición GET
         # y observar que sucede.
-        # data.pop('password')
-        # data.pop('is_active')
+        data.pop('password')
+        data.pop('is_active')
         return data
 
-
-class UserTokenSerializer(serializers.Serializer):
-    username = serializers.CharField(write_only=True)
-    password = serializers.CharField(write_only=True)
-
-    class Meta:
-        model = User
-        fields = ('username', 'password')
-
-    def validate(self, data):
-        _username = self.Meta.model.objects.filter(
-            username=data.get('username')
-        ).first()
-        if not _username:
-            raise serializers.ValidationError(
-                'El username ingresado no existe'
-            )
-        if not _username.check_password(data.get('password')):
-            raise serializers.ValidationError(
-                'La password ingresada es incorrecta'
-            )
-        return data
 
 class TokenSerializer(serializers.ModelSerializer):
     user = UserSerializer(many=False, read_only=True)
+    token = serializers.CharField(source='key', read_only=True)
 
     class Meta:
         model = Token
-        fields = ('key', 'user')
+        fields = ('user', 'token')
         
 
 class UpdatePasswordUserSerializer(serializers.ModelSerializer):
@@ -131,8 +131,7 @@ class UpdatePasswordUserSerializer(serializers.ModelSerializer):
         )
 
     def validate_username(self, value):
-        print('Validación de campo')
-        print(value)
+        print('Se ejecutó 1ro la validación a nivel de campo "username".')
         if value != self.instance.username:
             raise serializers.ValidationError(
                  {'message': 'The current username entered is not correct.'}
@@ -142,9 +141,7 @@ class UpdatePasswordUserSerializer(serializers.ModelSerializer):
     # Override del método que valida y verifica si la password actual
     # corresponde al user en cuestión.
     def validate_current_password(self, value):
-        print('Validación de campo')
-        print(value)
-        print(self.instance.check_password(value))
+        print('Se ejecutó 1ro la validación a nivel de campo "current_password".')
         if not self.instance.check_password(value):
             raise serializers.ValidationError(
                 {'message': 'The current password entered is not correct.'}
@@ -156,8 +153,7 @@ class UpdatePasswordUserSerializer(serializers.ModelSerializer):
     # las validaciones.
     # https://docs.djangoproject.com/en/3.1/topics/auth/passwords/
     def validate_new_password(self, value):
-        print('Validación de campo')
-        print(value)
+        print('Se ejecutó 1ro la validación a nivel de campo "new_password".')
         try:
             password_validation.validate_password(
                 value, self.instance
@@ -177,7 +173,7 @@ class UpdatePasswordUserSerializer(serializers.ModelSerializer):
         Acá se realiza la validación de todos los campos que están
         vigentes en el parámetro 'data'.
         '''
-        print('Validación de objeto')
+        print('Se ejecutó 2do la validación a nivel de objeto/instancia.')
         print(data)
         if not data.get('username'):
             self._required_field_message('username')
@@ -221,9 +217,7 @@ class UpdatePasswordUserSerializer(serializers.ModelSerializer):
 
 # TODO: Realizar el serializador para el modelo de WishList
 class WishListSerializer(serializers.ModelSerializer):
-    # algo =  serializers.SerializerMethodField()
     user = serializers.PrimaryKeyRelatedField(
-        write_only=True,
         queryset=User.objects.all()
     )
     comic = serializers.PrimaryKeyRelatedField(
@@ -240,5 +234,6 @@ class WishListSerializer(serializers.ModelSerializer):
             'favorite',
             'cart',
             'wished_qty',
-            'buied_qty'
+            'bought_qty'
         )
+        read_only_fields = ('id',)
