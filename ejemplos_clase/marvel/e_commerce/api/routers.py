@@ -21,8 +21,8 @@ router = DefaultRouter()
 # siempre va intentar buscar en el archivo es que exista la lista
 # 'urlpatterns'.
 router.register(
-    r'modelviewset/users',
-    UserViewSet,
+    prefix=r'modelviewset/users',
+    viewset=UserViewSet,
     basename='modelviewset/users'
 )
 router.register(
@@ -31,9 +31,9 @@ router.register(
     basename='modelviewset/filtering-backend/users'
 )
 router.register(
-    r'viewset/users',
+    r'viewset/password',
     CustomUserViewSet,
-    basename='viewsets/users'
+    basename='viewsets/password'
 )
 router.register(
     r'genericviewset/users',

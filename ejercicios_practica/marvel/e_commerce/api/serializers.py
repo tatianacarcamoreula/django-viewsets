@@ -217,14 +217,13 @@ class UpdatePasswordUserSerializer(serializers.ModelSerializer):
 
 # TODO: Realizar el serializador para el modelo de WishList
 class WishListSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all()
-    )
-    comic = serializers.PrimaryKeyRelatedField(
-        write_only=True,
-        queryset=Comic.objects.all()
-    )
-    
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['user'] = UserSerializer(many=False)
+        data['comic'] = ComicSerializer(many=False)
+        return data
+
     class Meta:
         model = WishList
         fields = (

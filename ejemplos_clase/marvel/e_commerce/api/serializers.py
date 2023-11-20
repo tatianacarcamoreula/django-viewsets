@@ -14,21 +14,30 @@ from e_commerce.models import Comic, WishList
 
 
 class ComicSerializer(serializers.ModelSerializer):
-    # new_field =  serializers.SerializerMethodField()
+    note =  serializers.SerializerMethodField()
+
+    def get_note(self, instance):
+        return instance.title
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        print(data)
+        print(self.fields)
+        data['pepito'] = 'hello world'
+        return data
     
     class Meta:
         model = Comic
-        fields = ('marvel_id','title', 'description', 'price', 'stock_qty', 'picture')
+        fields = (
+            'marvel_id',
+            'title',
+            'description',
+            'price',
+            'stock_qty',
+            'picture',
+            'note'
+        )
         # fields = ('marvel_id', 'title', 'algo')
-
-    # def get_new_field(self, obj):
-    #     return {'hola':10}
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        exclude = ('password',)
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -103,8 +112,11 @@ class UserSerializer(serializers.ModelSerializer):
         
         # NOTE: Descomentar, realizar una petición GET
         # y observar que sucede.
-        data.pop('password')
-        data.pop('is_active')
+        # data.pop('password')
+        # data.pop('is_active')
+        # first_name = data.pop('first_name')
+        # last_name = data.pop('last_name')
+        # data['full_name'] = first_name + ' ' + last_name
         return data
 
 
@@ -217,13 +229,11 @@ class UpdatePasswordUserSerializer(serializers.ModelSerializer):
 
 # TODO: Realizar el serializador para el modelo de WishList
 class WishListSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all()
-    )
-    comic = serializers.PrimaryKeyRelatedField(
-        write_only=True,
-        queryset=Comic.objects.all()
-    )
+
+    def to_representation(self, instance):
+       self.fields['comic'] = ComicSerializer()
+       self.fields['user'] = UserSerializer()
+       return super().to_representation(instance)
     
     class Meta:
         model = WishList

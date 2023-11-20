@@ -1,8 +1,10 @@
-from django.db.models import Subquery
-from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404
 
+from rest_framework import status
+from rest_framework.authentication import TokenAuthentication, BasicAuthentication
+from rest_framework.decorators import api_view
 # (GET - ListAPIView) Listar todos los elementos en la entidad:
 # (POST - CreateAPIView) Inserta elementos en la DB
 # (GET - RetrieveAPIView) Devuelve un solo elemento de la entidad.
@@ -17,19 +19,11 @@ from rest_framework.generics import (
     RetrieveUpdateAPIView,
     DestroyAPIView,
     GenericAPIView,
-    UpdateAPIView,
+    UpdateAPIView
 )
-from rest_framework.views import APIView
-# Importamos librerías para gestionar los permisos de acceso a nuestras APIs
-from rest_framework import status
-from rest_framework.authentication import (
-    BasicAuthentication, TokenAuthentication
-)
-from rest_framework.authtoken.models import Token
-from rest_framework.parsers import JSONParser
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.renderers import JSONRenderer
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
+from rest_framework.validators import ValidationError
 from rest_framework.views import APIView
 
 # NOTE: Importamos este decorador para poder customizar los 
@@ -40,7 +34,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from e_commerce.api.serializers import *
-from e_commerce.models import Comic, WishList
+from e_commerce.models import Comic
 
 
 mensaje_headder = '''
@@ -58,7 +52,47 @@ headers = {
 }
 ```
 '''
-# NOTE: APIs genéricas:
+
+@api_view(http_method_names=['GET'])
+def comic_list_api_view(request):
+    _queryset = Comic.objects.all()
+    _data = list(_queryset.values()) if _queryset.exists() else []
+    return Response(data=_data, status=status.HTTP_200_OK)
+
+
+@api_view(http_method_names=['GET'])
+def comic_retrieve_api_view(request):
+    instance = get_object_or_404(
+        Comic, id=request.query_params.get('id')
+    )
+    return Response(
+        data=model_to_dict(instance), status=status.HTTP_200_OK
+    )
+
+
+@api_view(http_method_names=['POST'])
+def comic_create_api_view(request):
+    _marvel_id = request.data.pop('marvel_id', None)
+    print(request.data)
+    if not _marvel_id:
+        raise ValidationError(
+            {"marvel_id": "Este campo no puede ser nulo."}
+        )
+    _instance, _created = Comic.objects.get_or_create(
+        marvel_id=_marvel_id,
+        defaults=request.data
+    )
+    if _created:
+        return Response(
+            data=model_to_dict(_instance), status=status.HTTP_201_CREATED
+        )
+    return Response(
+        data={
+            "marvel_id": "Ya existe un comic con ese valor, debe ser único."
+        },
+        status=status.HTTP_400_BAD_REQUEST
+    )
+
 
 class GetComicAPIView(ListAPIView):
     __doc__ = f'''{mensaje_headder}
@@ -68,17 +102,8 @@ class GetComicAPIView(ListAPIView):
     '''
     queryset = Comic.objects.all()
     serializer_class = ComicSerializer
+    permission_classes = (AllowAny,)
 
-    # Equivale a --> permission_classes = (IsAdminUser & IsAuthenticated,)
-    permission_classes = (IsAuthenticated | IsAdminUser,)
-    # Descomentar y mostrar en clases para ver las diferencias entre 
-    # estos tipos de Authentication. Mostrar en Postman.
-
-    # HTTP Basic Authentication
-    # authentication_classes = [BasicAuthentication]
-
-    # Token Authentication
-    # authentication_classes = [TokenAuthentication]
 
 
 class PostComicAPIView(CreateAPIView):
@@ -88,7 +113,7 @@ class PostComicAPIView(CreateAPIView):
     '''
     queryset = Comic.objects.all()
     serializer_class = ComicSerializer
-    permission_classes = (IsAuthenticated & IsAdminUser,)
+    permission_classes = (AllowAny,)
 
 
 class ListCreateComicAPIView(ListCreateAPIView):
@@ -246,7 +271,6 @@ class LoginUserAPIView(APIView):
     Esquema de entrada:
     {"username":"root", "password":12345}
     
-    Utilizaremos JSONParser para tener  'Content-Type': 'application/json'\n\n
     Esta función sobrescribe la función post original de esta clase,
     recibe "request" y hay que setear format=None, para poder recibir 
     los datos en "request.data", la idea es obtener los datos enviados en el 
@@ -261,8 +285,6 @@ class LoginUserAPIView(APIView):
     }
     ```
     '''
-    parser_classes = (JSONParser,)
-    # renderer_classes = [JSONRenderer]
     authentication_classes = ()
     permission_classes = ()
 
@@ -274,54 +296,6 @@ class LoginUserAPIView(APIView):
     # NOTE 2: Descomentar dicho decorador para
     # mostrarlo en clase.
 
-    @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT, 
-            properties={
-                'username': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    description='username'
-                ),
-                'password': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    format=openapi.FORMAT_PASSWORD,
-                    description='password'
-                ),
-            }
-        ),
-        responses= {
-            "201": openapi.Response(
-                description='Token: api-key',
-                examples={
-                    "application/json": {
-                        "user": {
-                            "id": 1,
-                            "last_login": "2023-01-21T20:45:49.915124Z",
-                            "is_superuser": True,
-                            "username": "root",
-                            "first_name": "first_name",
-                            "last_name": "last_name",
-                            "email": "info@inove.com.ar",
-                            "is_staff": True,
-                            "is_active": True,
-                            "date_joined": "2023-01-21T20:45:37.572526Z",
-                            "groups": [],
-                            "user_permissions": []
-                        },              
-                        "token": "2c9dc08814ad3354bcd924a1ca70edef4032efc5"
-                    }
-                }
-            ),
-           "400": openapi.Response(
-                description='Credenciales Inválidas',
-                examples={
-                    "application/json": {
-                        'error': 'Invalid Credentials'
-                    }
-                }
-            ),
-        }
-    )
     def post(self, request):
         # Realizamos validaciones a través del serializador
         user_login_serializer = UserLoginSerializer(data=request.data)
@@ -334,6 +308,8 @@ class LoginUserAPIView(APIView):
             _account = authenticate(username=_username, password=_password)
             if _account:
                 _token, _created = Token.objects.get_or_create(user=_account)
+                _token_serializer = TokenSerializer(instance=_token, many=False)
+                _data = _token_serializer.data
                 return Response(
                     data=TokenSerializer(instance=_token, many=False).data,
                     status=status.HTTP_200_OK
@@ -342,93 +318,8 @@ class LoginUserAPIView(APIView):
                 data={'error': 'Invalid Credentials.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        print(user_login_serializer.errors)
         return Response(
             data=user_login_serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
-        )
-
-
-# TODO: Agregar las vistas genericas(vistas de API basadas en clases) 
-# que permitan realizar un CRUD del modelo de wish-list.
-# TODO: Crear una vista generica modificada(vistas de API basadas en clases)
-# para traer todos los comics que tiene un usuario.
-class GetWishListAPIView(ListAPIView):
-    __doc__ = f'''{mensaje_headder}
-    `[METODO GET]`
-    Esta vista de API nos devuelve una lista de todos los comics 
-    presentes en la base de datos.
-    '''
-    queryset = WishList.objects.all()
-    serializer_class = WishListSerializer
-    permission_classes = (IsAuthenticated & IsAdminUser,)
-
-
-class PostWishListAPIView(CreateAPIView):
-    __doc__ = f'''{mensaje_headder}
-    `[METODO POST]`
-    Esta vista de API nos permite hacer un insert en la base de datos.
-    '''
-    queryset = WishList.objects.all()
-    serializer_class = WishListSerializer
-    permission_classes = (IsAuthenticated,)
-
-
-class UpdateWishListAPIView(UpdateAPIView):
-    __doc__ = f'''{mensaje_headder}
-    `[METODO PUT - PATCH]`
-    Esta vista de API nos permite realizar un update sobre el modelo WishList.
-    '''
-    queryset = WishList.objects.all()
-    serializer_class = WishListSerializer
-    permission_classes = (IsAuthenticated,)
-    lookup_field = 'comic_id'
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.filter(user=self.request.user)
-
-    def put(self, request, *args, **kwargs):
-        _serializer = self.get_serializer(
-            instance=self.get_object(),
-            data=self.request.data,
-            partial=True
-        )
-        _serializer.is_valid(raise_exception=True)
-        _serializer.save()
-
-        return Response(data=_serializer.data, status=status.HTTP_200_OK)
-
-
-class DeleteWishListAPIView(DestroyAPIView):
-    __doc__ = f'''{mensaje_headder}
-    `[METODO PUT]`
-    Esta vista de API nos permite realizar un update sobre el modelo WishList.
-    '''
-    queryset = WishList.objects.all()
-    serializer_class = WishListSerializer
-    permission_classes = (IsAuthenticated,)
-    lookup_field = 'comic_id'
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.filter(user=self.request.user)
-
-
-class GetUserFavsAPIView(ListAPIView):
-    '''
-    ```
-    Vista de API personalizada para recibir peticiones de tipo GET.
-    Retorna la lista de comics favoritos de un usuario.
-    ```
-    '''
-    serializer_class = ComicSerializer
-    permission_classes = (IsAuthenticated,)
-
-    def get_queryset(self):
-        wish_list = WishList.objects.filter(
-            user__username=self.kwargs.get('username'),
-            favorite=True,
-        ).values_list('comic')
-        return self.serializer_class.Meta.model.objects.filter(
-            pk__in=Subquery(wish_list)
         )
