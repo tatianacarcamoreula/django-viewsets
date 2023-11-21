@@ -95,7 +95,7 @@ Basado en el material visto en clase, incluido en la carpeta "ejemplos_clase" de
 
 
 ### 5. Desarrollar una API que únicamente liste todos los comics que estén en favoritos y también en el carrito de compras de un determinado usuario.
-Debe crear una view llamada **UserComicAPIView** dentro de la carpeta *api*, dentro del archivo views.py.
+Debe crear una view llamada **ComicUserAPIView** dentro de la carpeta *api*, dentro del archivo views.py.
 - La clase debe heredar de la clase **ListAPIView**.
 - Debe utilizar un serializador para el modelo de *Comic*.
 - El listado de sus comics deben estar ordenados alfabéticamente por el campo **title**.
