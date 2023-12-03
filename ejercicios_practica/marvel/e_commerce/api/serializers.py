@@ -25,10 +25,10 @@ class ComicSerializer(serializers.ModelSerializer):
     #     return {'hola':10}
 
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        exclude = ('password',)
+# class UserSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         exclude = ('password',)
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -219,11 +219,9 @@ class UpdatePasswordUserSerializer(serializers.ModelSerializer):
 class WishListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['user'] = UserSerializer(many=False)
-        data['comic'] = ComicSerializer(many=False)
-        return data
-
+        self.fields['user'] = UserSerializer()
+        self.fields['comic'] = ComicSerializer()
+        return super().to_representation(instance)
     class Meta:
         model = WishList
         fields = (

@@ -26,6 +26,8 @@ urlpatterns = [
         RetrieveUpdateComicAPIView.as_view()
     ),
     path('comics/delete/<int:pk>/', DestroyComicAPIView.as_view()),
+    
+    path('comics/user/<str:username>/', ComicUserAPIView.as_view(), name='comic_list_user'),
     # User API Viewsets:
     path('users/', include('e_commerce.api.routers')),
 ]

@@ -33,6 +33,16 @@ from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+# Librería para manejar filtrado:
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+
+# Para manejar paginado:
+from rest_framework.pagination import (
+    LimitOffsetPagination,
+    PageNumberPagination
+)
+
 from e_commerce.api.serializers import *
 from e_commerce.models import Comic
 
@@ -323,3 +333,10 @@ class LoginUserAPIView(APIView):
             data=user_login_serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
+
+class ComicUserAPIView(ListAPIView):
+    serializer_class = ComicSerializer
+    pagination_class = PageNumberPagination
+    queryset = Comic.objects.all().order_by('title')
+    filter_backends = [SearchFilter]
+    search_fields = ['title', 'description']
